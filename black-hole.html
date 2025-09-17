@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Agujero Negro</title>
+    <style>
+      :root {
+        --bg: #05060a;
+        --panel: rgba(10, 14, 22, 0.75);
+        --accent: #ffb86b;
+        --muted: #9fb0c6;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        font-family: Inter, Roboto, "Helvetica Neue", Arial;
+        color: #eaf4ff;
+        background: linear-gradient(180deg, #020306 0%, #071026 70%);
+      }
+      .wrap {
+        display: flex;
+        gap: 16px;
+        height: 100vh;
+        padding: 14px;
+        box-sizing: border-box;
+      }
+      .canvas-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      canvas {
+        border-radius: 10px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+        background: radial-gradient(
+          circle at 50% 45%,
+          rgba(10, 12, 20, 0.4),
+          rgba(3, 6, 10, 0.9)
+        );
+      }
+      .panel {
+        width: 360px;
+        background: var(--panel);
+        border-radius: 10px;
+        padding: 12px;
+        box-sizing: border-box;
+        backdrop-filter: blur(6px);
+        color: #e8f6ff;
+      }
+      h1 {
+        margin: 4px 0 10px 0;
+        font-size: 16px;
+        color: var(--accent);
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 8px 0;
+      }
+      label {
+        width: 140px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      input[type="range"] {
+        flex: 1;
+      }
+      .val {
+        width: 70px;
+        text-align: right;
+        font-weight: 700;
+      }
+      .btn-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+      }
+      button {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        color: #eaf4ff;
+        padding: 8px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .small {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .help {
+        margin-top: 10px;
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.35;
+      }
+      @media (max-width: 980px) {
+        .wrap {
+          flex-direction: column;
+        }
+        .panel {
+          width: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="canvas-wrap">
+        <canvas id="canvas" width="1200" height="800"></canvas>
+      </div>
+
+      <div class="panel">
+        <h1>Agujero Negro — Simulación</h1>
+
+        <div class="row">
+          <label>Masas (M☉)</label>
+          <input
+            id="mass"
+            type="range"
+            min="1"
+            max="10000"
+            step="1"
+            value="10"
+          />
+          <div class="val" id="massVal">10</div>
+        </div>
+
+        <div class="row">
+          <label>Zoom (m / px)</label>
+          <input
+            id="zoom"
+            type="range"
+            min="50"
+            max="200000"
+            step="50"
+            value="2000"
+          />
+          <div class="val" id="zoomVal">2.0k</div>
+        </div>
+
+        <div class="row">
+          <label>Escala temporal</label>
+          <input
+            id="timescale"
+            type="range"
+            min="1"
+            max="5000"
+            step="1"
+            value="500"
+          />
+          <div class="val" id="timeVal">500×</div>
+        </div>
+
+        <div class="row">
+          <label>Partículas objetivo</label>
+          <input
+            id="particles"
+            type="range"
+            min="200"
+            max="8000"
+            step="50"
+            value="2000"
+          />
+          <div class="val" id="partVal">2000</div>
+        </div>
+
+        <div class="row">
+          <label>Paleta</label>
+          <select id="palette">
+            <option value="0">Azul → Naranja</option>
+            <option value="1">Cian → Magenta</option>
+            <option value="2">Dorado → Rojo</option>
+          </select>
+          <div class="val small" id="rsVal"></div>
+        </div>
+
+        <div class="row">
+          <label>Opciones</label>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label class="small"
+              ><input id="trails" type="checkbox" checked /> Estelas
+              (trails)</label
+            >
+            <label class="small"
+              ><input id="grid" type="checkbox" /> Rejilla radial</label
+            >
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button id="resetBtn">Reiniciar disco</button>
+          <button id="burstBtn">Ráfaga partículas</button>
+          <button id="addStars">Regenerar estrellas</button>
+          <button id="toggleHelp">Mostrar/Ocultar ayuda</button>
+        </div>
+
+        <div class="help" id="helpBox">
+          <div class="small">
+            <strong>Controles:</strong> [ / ] masa, Z/X zoom, -/+ tiempo, 1/2
+            partículas, T estelas, G rejilla, D paleta, R reiniciar, N ráfaga.
+            Haz clic para añadir una ráfaga local.
+          </div>
+          <div style="margin-top: 8px" class="small">
+            Modelo: radio de Schwarzschild \(r_s=2GM/c^2\). Potencial
+            Paczyński–Wiita \(\Phi=-GM/(r-r_s)\). ISCO a 3·r_s, esfera de
+            fotones a 1.5·r_s.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const G = 6.6743e-11;
+        const c = 299792458.0;
+        const M_sun = 1.98847e30;
+
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d", { alpha: false });
+        const W = canvas.width,
+          H = canvas.height;
+        const CENTER = { x: W / 2, y: H / 2 };
+
+        const massSlider = document.getElementById("mass");
+        const massVal = document.getElementById("massVal");
+        const zoomSlider = document.getElementById("zoom");
+        const zoomVal = document.getElementById("zoomVal");
+        const timeSlider = document.getElementById("timescale");
+        const timeVal = document.getElementById("timeVal");
+        const partSlider = document.getElementById("particles");
+        const partVal = document.getElementById("partVal");
+        const paletteSel = document.getElementById("palette");
+        const rsVal = document.getElementById("rsVal");
+        const trailsChk = document.getElementById("trails");
+        const gridChk = document.getElementById("grid");
+        const resetBtn = document.getElementById("resetBtn");
+        const burstBtn = document.getElementById("burstBtn");
+        const addStarsBtn = document.getElementById("addStars");
+        const toggleHelp = document.getElementById("toggleHelp");
+        const helpBox = document.getElementById("helpBox");
+
+        let mass_solar = parseFloat(massSlider.value);
+        let metersPerPixel = parseFloat(zoomSlider.value);
+        let timeScale = parseFloat(timeSlider.value);
+        let targetParticles = parseInt(partSlider.value);
+        let paletteId = parseInt(paletteSel.value);
+        let trailsOn = trailsChk.checked;
+        let showGrid = gridChk.checked;
+        let showHelp = true;
+
+        function schwarzschildRadius(mass_kg) {
+          return (2.0 * G * mass_kg) / (c * c);
+        }
+        let mass_kg = mass_solar * M_sun;
+        let r_s = schwarzschildRadius(mass_kg);
+
+        class Particle {
+          constructor(pos_m, vel_m, color) {
+            this.pos = pos_m;
+            this.vel = vel_m;
+            this.color = color;
+            this.life = 0;
+            this.alpha = 255;
+          }
+        }
+        let particles = [];
+
+        let stars = [];
+        const STAR_COUNT = 450;
+        function makeStarfield() {
+          stars = [];
+          for (let i = 0; i < STAR_COUNT; i++) {
+            let x = Math.random() * W;
+            let y = Math.random() * H;
+            if (Math.hypot(x - CENTER.x, y - CENTER.y) < 60) {
+              i--;
+              continue;
+            }
+            stars.push({ x, y });
+          }
+        }
+
+        function palette(radiusNorm, id) {
+          radiusNorm = Math.max(0, Math.min(1, radiusNorm));
+          if (id === 0) {
+            if (radiusNorm < 0.5) {
+              let t = radiusNorm / 0.5;
+              let r = Math.round(50 + (240 - 50) * t);
+              let g = Math.round(120 + (240 - 120) * t);
+              let b = Math.round(255 + (240 - 255) * t);
+              return `rgb(${r},${g},${b})`;
+            } else {
+              let t = (radiusNorm - 0.5) / 0.5;
+              let r = Math.round(240 + (255 - 240) * t);
+              let g = Math.round(240 + (165 - 240) * t);
+              let b = Math.round(240 + (0 - 240) * t);
+              return `rgb(${r},${g},${b})`;
+            }
+          } else if (id === 1) {
+            if (radiusNorm < 0.5) {
+              let t = radiusNorm / 0.5;
+              let r = Math.round(0 + (220 - 0) * t);
+              let g = Math.round(200 + (220 - 200) * t);
+              let b = Math.round(255 + (220 - 255) * t);
+              return `rgb(${r},${g},${b})`;
+            } else {
+              let t = (radiusNorm - 0.5) / 0.5;
+              let r = Math.round(220 + (255 - 220) * t);
+              let g = Math.round(220 + (0 - 220) * t);
+              let b = Math.round(220 + (255 - 220) * t);
+              return `rgb(${r},${g},${b})`;
+            }
+          } else {
+            if (radiusNorm < 0.5) {
+              let t = radiusNorm / 0.5;
+              let r = Math.round(255 + (255 - 255) * t);
+              let g = Math.round(215 + (255 - 215) * t);
+              let b = Math.round(0 + (255 - 0) * t);
+              return `rgb(${r},${g},${b})`;
+            } else {
+              let t = (radiusNorm - 0.5) / 0.5;
+              let r = Math.round(255 + (255 - 255) * t);
+              let g = Math.round(255 + (80 - 255) * t);
+              let b = Math.round(255 + (20 - 255) * t);
+              return `rgb(${r},${g},${b})`;
+            }
+          }
+        }
+
+        function metersToPixels(vec) {
+          return { x: vec.x / metersPerPixel, y: vec.y / metersPerPixel };
+        }
+        function toScreen(pos_m) {
+          let p = metersToPixels(pos_m);
+          return { x: CENTER.x + p.x, y: CENTER.y - p.y };
+        }
+        function fromScreen(px, py) {
+          return {
+            x: (px - CENTER.x) * metersPerPixel,
+            y: (CENTER.y - py) * metersPerPixel,
+          };
+        }
+
+        function accPw(pos_m, massKg, rs) {
+          let rx = pos_m.x,
+            ry = pos_m.y;
+          let r = Math.hypot(rx, ry) + 1e-12;
+          if (r <= rs * 1.001) r = rs * 1.001;
+          let mag = -(G * massKg) / Math.pow(r - rs, 2);
+          return { x: (mag / r) * rx, y: (mag / r) * ry };
+        }
+
+        function vCircular(massKg, r, rs) {
+          let rEff = Math.max(r, 1.01 * rs);
+          return Math.sqrt(G * massKg * rEff) / (rEff - rs);
+        }
+
+        function spawnParticle(massKg, rs, rMin, rMax) {
+          let r = rMin + Math.random() * (rMax - rMin);
+          let angle = Math.random() * Math.PI * 2;
+          let pos = { x: r * Math.cos(angle), y: r * Math.sin(angle) };
+          let v_c = vCircular(massKg, r, rs);
+          let tHat = { x: -Math.sin(angle), y: Math.cos(angle) };
+          let vel = { x: tHat.x * v_c, y: tHat.y * v_c };
+          vel.x += (Math.random() - 0.5) * v_c * 0.02;
+          vel.y += (Math.random() - 0.5) * v_c * 0.02;
+          pos.x += (Math.random() - 0.5) * r * 0.005;
+          pos.y += (Math.random() - 0.5) * r * 0.005;
+          let color = palette(
+            (r - rMin) / Math.max(1e-6, rMax - rMin),
+            paletteId
+          );
+          return new Particle(pos, vel, color);
+        }
+
+        function ensureParticles() {
+          let r_isco = 3.0 * r_s;
+          let rMin = 1.2 * r_isco;
+          let rMax = 8.0 * r_isco;
+          while (particles.length < targetParticles) {
+            particles.push(spawnParticle(mass_kg, r_s, rMin, rMax));
+          }
+        }
+
+        function resetParticles() {
+          particles = [];
+          ensureParticles();
+        }
+
+        function drawStarfield() {
+          ctx.fillStyle = "#000000";
+          for (let s of stars) {
+            let rx = s.x - CENTER.x,
+              ry = s.y - CENTER.y;
+            let b_px = Math.hypot(rx, ry);
+            if (b_px < 1e-6) continue;
+            let b_m = b_px * metersPerPixel;
+            let denom = Math.max(b_m, r_s);
+            let alpha = (4.0 * G * mass_kg) / (c * c * denom);
+            let scale = Math.max(0, Math.min(30, alpha * 1.2e5));
+            let offx = (rx / b_px) * scale;
+            let offy = (ry / b_px) * scale;
+            ctx.fillRect(Math.round(s.x + offx), Math.round(s.y + offy), 1, 1);
+          }
+        }
+
+        function drawGlow(rs_px) {
+          let radius = Math.round(1.5 * rs_px);
+          for (let w = 40; w > 0; w--) {
+            ctx.beginPath();
+            ctx.strokeStyle = `rgba(255,190,120,${0.03 * (w / 40)})`;
+            ctx.lineWidth = 2;
+            ctx.arc(CENTER.x, CENTER.y, radius + w, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        }
+
+        function drawDashedCircle(x, y, r, color, width = 1, dash = true) {
+          if (!dash) {
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.stroke();
+            return;
+          }
+          const segments = 64;
+          for (let i = 0; i < segments; i++) {
+            if (i % 2 !== 0) continue;
+            let a0 = (i / segments) * Math.PI * 2;
+            let a1 = ((i + 1) / segments) * Math.PI * 2;
+            let p0x = x + r * Math.cos(a0);
+            let p0y = y + r * Math.sin(a0);
+            let p1x = x + r * Math.cos(a1);
+            let p1y = y + r * Math.sin(a1);
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.moveTo(p0x, p0y);
+            ctx.lineTo(p1x, p1y);
+            ctx.stroke();
+          }
+        }
+
+        const trailCanvas = document.createElement("canvas");
+        trailCanvas.width = W;
+        trailCanvas.height = H;
+        const trailCtx = trailCanvas.getContext("2d", { alpha: true });
+        trailCtx.globalCompositeOperation = "lighter";
+
+        function drawParticles(rs_px) {
+          if (trailsOn) {
+            trailCtx.fillStyle = "rgba(0,0,0,0.12)";
+            trailCtx.fillRect(0, 0, W, H);
+          } else {
+            trailCtx.clearRect(0, 0, W, H);
+          }
+
+          for (let p of particles) {
+            let s = toScreen(p.pos);
+            if (s.x < -10 || s.x > W + 10 || s.y < -10 || s.y > H + 10)
+              continue;
+            trailCtx.fillStyle = p.color
+              .replace("rgb", "rgba")
+              .replace(")", `,${Math.round((p.alpha / 255) * 0.9)})`);
+            trailCtx.fillRect(Math.round(s.x), Math.round(s.y), 2, 2);
+          }
+
+          ctx.drawImage(trailCanvas, 0, 0);
+        }
+
+        let lastTime = performance.now();
+        let running = true;
+        let subDtBase = 0.02;
+        function step() {
+          if (!running) return;
+          let now = performance.now();
+          let dtReal = (now - lastTime) / 1000;
+          lastTime = now;
+          dtReal = Math.min(0.05, dtReal);
+          let simDt = subDtBase * timeScale;
+          let stepsCount = 1;
+          for (let s = 0; s < stepsCount; s++) {
+            for (let i = 0; i < particles.length; i++) {
+              let p = particles[i];
+              let a = accPw(p.pos, mass_kg, r_s);
+              p.vel.x += a.x * simDt;
+              p.vel.y += a.y * simDt;
+              p.pos.x += p.vel.x * simDt;
+              p.pos.y += p.vel.y * simDt;
+              p.life += simDt;
+              if (p.life < 0.6) p.alpha = Math.round(255 * (p.life / 0.6));
+              else p.alpha = 255;
+
+              let r = Math.hypot(p.pos.x, p.pos.y);
+              let r_isco = 3.0 * r_s;
+              let rMax = 8.0 * r_isco;
+              if (!isFinite(r) || r <= r_s * 1.02 || r > rMax * 1.2) {
+                particles[i] = spawnParticle(mass_kg, r_s, 1.2 * r_isco, rMax);
+              }
+            }
+
+            if (particles.length < targetParticles) ensureParticles();
+            else if (particles.length > targetParticles)
+              particles.length = targetParticles;
+          }
+
+          ctx.fillStyle = "#05060a";
+          ctx.fillRect(0, 0, W, H);
+
+          drawStarfield();
+
+          drawParticles(r_s / metersPerPixel);
+
+          let rs_px = Math.max(2, Math.round(r_s / metersPerPixel));
+          ctx.fillStyle = "#000";
+          ctx.beginPath();
+          ctx.arc(CENTER.x, CENTER.y, rs_px, 0, Math.PI * 2);
+          ctx.fill();
+
+          drawGlow(rs_px);
+
+          let r_isco_px = Math.round((3.0 * r_s) / metersPerPixel);
+          let r_ph_px = Math.round((1.5 * r_s) / metersPerPixel);
+          if (showGrid) {
+            for (let k = 1; k <= 7; k++) {
+              let rp = r_isco_px * k;
+              if (rp > 0)
+                drawDashedCircle(
+                  CENTER.x,
+                  CENTER.y,
+                  rp,
+                  k % 2 ? "rgba(80,80,90,0.12)" : "rgba(60,60,70,0.10)",
+                  1,
+                  true
+                );
+            }
+          }
+          if (r_isco_px > 1)
+            drawDashedCircle(
+              CENTER.x,
+              CENTER.y,
+              r_isco_px,
+              "rgba(255,170,80,0.9)",
+              1,
+              true
+            );
+          if (r_ph_px > 1)
+            drawDashedCircle(
+              CENTER.x,
+              CENTER.y,
+              r_ph_px,
+              "rgba(255,230,180,0.6)",
+              1,
+              false
+            );
+
+          ctx.beginPath();
+          ctx.strokeStyle = "rgba(255,160,60,0.08)";
+          ctx.lineWidth = 2;
+          ctx.arc(
+            CENTER.x,
+            CENTER.y,
+            Math.max(1, Math.round(1.8 * r_isco_px)),
+            0,
+            Math.PI * 2
+          );
+          ctx.stroke();
+
+          ctx.fillStyle = "rgba(230,240,255,0.95)";
+          ctx.font = "13px monospace";
+          ctx.fillText(
+            `M = ${mass_solar.toLocaleString()} M☉    r_s = ${Math.round(
+              r_s
+            )} m`,
+            12,
+            18
+          );
+          ctx.fillText(
+            `Zoom: ${formatMetersPerPixel(
+              metersPerPixel
+            )} m/px    Time: ${timeScale}×`,
+            12,
+            36
+          );
+          ctx.fillText(
+            `Particles: ${particles.length}/${targetParticles}    Trails: ${
+              trailsOn ? "ON" : "OFF"
+            }`,
+            12,
+            54
+          );
+
+          requestAnimationFrame(step);
+        }
+
+        function formatMetersPerPixel(v) {
+          if (v >= 1000) return (v / 1000).toFixed(1) + "k";
+          return Math.round(v);
+        }
+
+        function updateDerived() {
+          mass_kg = mass_solar * M_sun;
+          r_s = schwarzschildRadius(mass_kg);
+          rsVal.textContent = `r_s=${Math.round(r_s)} m`;
+        }
+
+        massSlider.addEventListener("input", () => {
+          mass_solar = parseFloat(massSlider.value);
+          massVal.textContent = mass_solar;
+          updateDerived();
+          resetParticles();
+        });
+        zoomSlider.addEventListener("input", () => {
+          metersPerPixel = parseFloat(zoomSlider.value);
+          zoomVal.textContent = formatMetersPerPixel(metersPerPixel);
+        });
+        timeSlider.addEventListener("input", () => {
+          timeScale = parseFloat(timeSlider.value);
+          timeVal.textContent = `${timeScale}×`;
+        });
+        partSlider.addEventListener("input", () => {
+          targetParticles = parseInt(partSlider.value);
+          partVal.textContent = targetParticles;
+          ensureParticles();
+        });
+        paletteSel.addEventListener("change", () => {
+          paletteId = parseInt(paletteSel.value);
+          resetParticles();
+        });
+        trailsChk.addEventListener("change", () => {
+          trailsOn = trailsChk.checked;
+        });
+        gridChk.addEventListener("change", () => {
+          showGrid = gridChk.checked;
+        });
+
+        resetBtn.addEventListener("click", () => {
+          resetParticles();
+          trailCtx.clearRect(0, 0, W, H);
+        });
+        burstBtn.addEventListener("click", () => {
+          for (let i = 0; i < Math.min(400, targetParticles); i++)
+            particles.push(
+              spawnParticle(mass_kg, r_s, 1.2 * 3.0 * r_s, 8.0 * 3.0 * r_s)
+            );
+        });
+        addStarsBtn.addEventListener("click", () => {
+          makeStarfield();
+        });
+        toggleHelp.addEventListener("click", () => {
+          showHelp = !showHelp;
+          helpBox.style.display = showHelp ? "block" : "none";
+        });
+
+        canvas.addEventListener("click", (ev) => {
+          let rect = canvas.getBoundingClientRect();
+          let x = ev.clientX - rect.left,
+            y = ev.clientY - rect.top;
+          let mpos = fromScreen(x, y);
+          for (let i = 0; i < 120; i++) {
+            let p = spawnParticle(
+              mass_kg,
+              r_s,
+              1.2 * 3.0 * r_s,
+              8.0 * 3.0 * r_s
+            );
+            p.pos.x = mpos.x + (Math.random() - 0.5) * r_s * 0.6;
+            p.pos.y = mpos.y + (Math.random() - 0.5) * r_s * 0.6;
+            particles.push(p);
+          }
+        });
+
+        window.addEventListener("keydown", (ev) => {
+          if (ev.key === "[") {
+            massSlider.value = Math.max(1, Math.round(massSlider.value * 0.9));
+            massSlider.dispatchEvent(new Event("input"));
+          }
+          if (ev.key === "]") {
+            massSlider.value = Math.min(
+              1e9,
+              Math.round(massSlider.value * 1.1)
+            );
+            massSlider.dispatchEvent(new Event("input"));
+          }
+          if (ev.key === "z" || ev.key === "Z") {
+            zoomSlider.value = Math.min(
+              parseInt(zoomSlider.max),
+              Math.round(parseFloat(zoomSlider.value) * 1.25)
+            );
+            zoomSlider.dispatchEvent(new Event("input"));
+          }
+          if (ev.key === "x" || ev.key === "X") {
+            zoomSlider.value = Math.max(
+              parseInt(zoomSlider.min),
+              Math.round(parseFloat(zoomSlider.value) * 0.8)
+            );
+            zoomSlider.dispatchEvent(new Event("input"));
+          }
+          if (ev.key === "-") {
+            timeSlider.value = Math.max(
+              parseInt(timeSlider.min),
+              Math.round(parseFloat(timeSlider.value) * 0.8)
+            );
+            timeSlider.dispatchEvent(new Event("input"));
+          }
+          if (ev.key === "+" || ev.key === "=") {
+            timeSlider.value = Math.min(
+              parseInt(timeSlider.max),
+              Math.round(parseFloat(timeSlider.value) * 1.25)
+            );
+            timeSlider.dispatchEvent(new Event("input"));
+          }
+          if (ev.key === "t" || ev.key === "T") {
+            trailsChk.checked = !trailsChk.checked;
+            trailsChk.dispatchEvent(new Event("change"));
+          }
+          if (ev.key === "g" || ev.key === "G") {
+            gridChk.checked = !gridChk.checked;
+            gridChk.dispatchEvent(new Event("change"));
+          }
+          if (ev.key === "d" || ev.key === "D") {
+            paletteSel.selectedIndex =
+              (paletteSel.selectedIndex + 1) % paletteSel.options.length;
+            paletteSel.dispatchEvent(new Event("change"));
+          }
+          if (ev.key === "r" || ev.key === "R") {
+            resetBtn.click();
+          }
+          if (ev.key === "n" || ev.key === "N") {
+            burstBtn.click();
+          }
+          if (ev.key === "1") {
+            partSlider.value = Math.max(
+              200,
+              Math.round(parseInt(partSlider.value) * 0.8)
+            );
+            partSlider.dispatchEvent(new Event("input"));
+          }
+          if (ev.key === "2") {
+            partSlider.value = Math.min(
+              8000,
+              Math.round(parseInt(partSlider.value) * 1.25)
+            );
+            partSlider.dispatchEvent(new Event("input"));
+          }
+        });
+
+        makeStarfield();
+        updateDerived();
+        resetParticles();
+        lastTime = performance.now();
+        requestAnimationFrame(step);
+
+        window._blackhole = {
+          particles,
+          makeStarfield,
+          resetParticles,
+          toScreen,
+          fromScreen,
+        };
+      })();
+    </script>
+  </body>
+</html>
