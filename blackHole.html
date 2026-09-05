@@ -1,0 +1,177 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Event Horizon | Black Hole Simulator</title>
+    <link rel="stylesheet" href="blackHole.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">Interactive astrophysics lab / 01</div>
+          <h1>Event Horizon</h1>
+        </div>
+        <p>
+          A living model of matter orbiting the point where escape velocity
+          reaches the speed of light.
+        </p>
+      </header>
+      <div class="workspace">
+        <section class="stage" aria-label="Black hole simulation">
+          <div class="stage-label">
+            Live simulation
+            <span>Click to inject matter · drag to pan · scroll to zoom</span>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="canvas" width="1200" height="800"></canvas>
+          </div>
+          <div class="legend" id="legend">
+            <div><i></i> Innermost stable orbit</div>
+            <div><i class="photon"></i> Photon sphere</div>
+          </div>
+        </section>
+        <aside class="control-panel">
+          <div class="panel-head">
+            <div>
+              <div class="kicker">Mission controls</div>
+              <h2>Shape the system</h2>
+            </div>
+            <div class="status" id="status">● Running</div>
+          </div>
+          <section class="section">
+            <div class="section-title">
+              <span>Choose a black hole</span><small>Real objects</small>
+            </div>
+            <div class="preset-grid" id="presetGrid"></div>
+          </section>
+          <section class="section">
+            <div class="section-title">
+              <span>Black hole parameters</span><small>Physical scale</small>
+            </div>
+            <div class="control">
+              <label for="mass"
+                >Mass <span class="val" id="massVal">10 M☉</span></label
+              ><input
+                id="mass"
+                type="range"
+                min="0"
+                max="1100"
+                step="1"
+                value="100"
+              />
+            </div>
+            <div class="control">
+              <label for="zoom"
+                >Field of view
+                <span class="val" id="zoomVal">2.0k m/px</span></label
+              ><input
+                id="zoom"
+                type="range"
+                min="0"
+                max="1400"
+                step="1"
+                value="700"
+              />
+            </div>
+            <div class="control">
+              <label for="timescale"
+                >Time compression
+                <span class="val" id="timeVal">500×</span></label
+              ><input
+                id="timescale"
+                type="range"
+                min="0"
+                max="700"
+                step="1"
+                value="270"
+              />
+            </div>
+          </section>
+          <section class="section">
+            <div class="section-title">
+              <span>Observation settings</span><small>Rendering</small>
+            </div>
+            <div class="control">
+              <label for="particles"
+                >Disk density <span class="val" id="partVal">2,000</span></label
+              ><input
+                id="particles"
+                type="range"
+                min="200"
+                max="8000"
+                step="50"
+                value="2000"
+              />
+            </div>
+            <div class="control">
+              <label for="imaging">Imaging mode</label
+              ><select id="imaging">
+                <option value="optical">Optical · thermal colors</option>
+                <option value="radio">Radio · EHT-inspired</option>
+                <option value="xray">X-ray · hot inner disk</option>
+              </select>
+            </div>
+            <div class="switches">
+              <label><input id="trails" type="checkbox" checked /> Trails</label
+              ><label><input id="grid" type="checkbox" /> Grid</label
+              ><label><input id="labels" type="checkbox" /> Labels</label>
+            </div>
+          </section>
+          <section class="section">
+            <div class="button-row">
+              <button id="pauseBtn" class="primary">Pause simulation</button
+              ><button id="resetBtn">Reset disk</button
+              ><button id="addStars">New starfield</button
+              ><button id="resetView">Reset view</button>
+            </div>
+          </section>
+          <section class="section">
+            <div class="section-title">
+              <span>Readout</span><small>Derived values</small>
+            </div>
+            <div class="metrics">
+              <div class="metric">
+                <strong id="rsMetric">—</strong
+                ><span>Schwarzschild radius</span>
+              </div>
+              <div class="metric">
+                <strong id="iscoMetric">—</strong
+                ><span>Stable orbit (ISCO)</span>
+              </div>
+              <div class="metric">
+                <strong id="particleMetric">—</strong
+                ><span>Orbiting particles</span>
+              </div>
+              <div class="metric">
+                <strong id="speedMetric">0.00 c</strong
+                ><span>Approx. orbital speed</span>
+              </div>
+            </div>
+          </section>
+          <section class="section">
+            <div class="section-title">
+              <span>What am I seeing?</span
+              ><button id="toggleHelp" aria-expanded="true">Hide guide</button>
+            </div>
+            <div class="help" id="helpBox">
+              <strong>The dark center</strong> is the event horizon: beyond it,
+              no signal can return. The glowing disk is matter spiraling inward.
+              The orange ring marks the ISCO, while the pale ring marks the
+              photon sphere. This is an educational Newtonian approximation
+              using the Paczyński–Wiita potential, not a full general-relativity
+              ray tracer.
+            </div>
+          </section>
+        </aside>
+      </div>
+      <div class="footer-note">
+        Keyboard: [ ] mass | Z X zoom | - + time | T trails | G grid | L labels |
+        D imaging | R reset | Space pause
+      </div>
+    </main>
+
+    <script src="blackHole.js"></script>
+  </body>
+</html>
